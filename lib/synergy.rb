@@ -8,19 +8,21 @@ require 'spree_i18n'
 # require 'spree_static_content'
 require 'spree_editor'
 require 'spree_online_support'
-require 'spree_robokassa'
 # require 'spree_yandex_market'
+# require 'spree_robokassa'
+require 'synergy_mainpay'
+>>>>>>> 6b714c360bd9553c096ce071c83ae2b68261013f
 require 'spree_address_book'
 require 'spree_dynamic_sitemaps'
 require 'formtastic'
 require 'russian'
 require 'ru_propisju'
 
-require 'synergy_hooks'
 require 'ext/number_helper'
 
 module Synergy
   class Engine < Rails::Engine
+    engine_name 'synergy'
 
     config.autoload_paths += %W(#{config.root}/lib)
 
@@ -50,7 +52,7 @@ module Synergy
         # store address
         #Spree::Config.set(:store_address => 'Somewhere st. Nowhere')
       end
-      
+
       ::ADDRESS_FIELDS.clear << ["lastname", "firstname", "secondname", "country", "state", "city", "zipcode", "address1", "phone"]
       ::ADDRESS_FIELDS.flatten!
 
@@ -59,31 +61,43 @@ module Synergy
           self.parameterize
         end
      	end
-     	
-      # зарегистрировать калькулятор для доставки наложенным платежём
-      Calculator::CashOnDelivery.register
-      
-      PaymentMethod::SberBankInvoice.register
-      
-      # добавление способа оплаты (и калькулятора для него) для юридических лиц
-      PaymentMethod::JuridicalInvoice.register
-      Calculator::Juridical.register
-      
+
+
       # добавить событие для перехода от шага доставки к шагу подтверждения, минуя шаг оплаты
       confirm_event = StateMachine::Event.new(Order.state_machine, :confirm_without_payment)
       confirm_event.transition :to => 'confirm'
       Order.state_machine.events << confirm_event
-      
+
       # переопределение события :next для отображения шага подтверждения в любом случае
       next_event = StateMachine::Event.new(Order.state_machine, :next)
       next_event.transition :from => 'cart',     :to => 'address'
       next_event.transition :from => 'address',  :to => 'delivery'
       next_event.transition :from => 'delivery', :to => 'payment'
       next_event.transition :from => 'payment',  :to => 'confirm'
-      next_event.transition :from => 'confirm',  :to => 'complete'     
+      next_event.transition :from => 'confirm',  :to => 'complete'
       Order.state_machine.events << next_event
     end
 
     config.to_prepare &method(:activate).to_proc
+
+    initializer "spree.register.calculators" do |app|
+      app.config.spree.calculators.shipping_methods = [
+          Calculator::FlatPercentItemTotal,
+          Calculator::FlatRate,
+          Calculator::CashOnDelivery,
+          Calculator::Juridical,
+          Calculator::FlexiRate,
+          Calculator::PerItem]
+    end
+
+    initializer "spree.register.payment_methods" do |app|
+      app.config.spree.payment_methods = [
+          Gateway::Bogus,
+          Gateway::PayPal,
+          PaymentMethod::Check,
+          PaymentMethod::SberBankInvoice,
+          PaymentMethod::JuridicalInvoice ]
+    end
   end
 end
+
