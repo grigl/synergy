@@ -11,7 +11,6 @@ require 'spree_online_support'
 # require 'spree_yandex_market'
 # require 'spree_robokassa'
 require 'synergy_mainpay'
->>>>>>> 6b714c360bd9553c096ce071c83ae2b68261013f
 require 'spree_address_book'
 require 'spree_dynamic_sitemaps'
 require 'formtastic'
